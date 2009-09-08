@@ -1,0 +1,19 @@
+= Presenter Example
+
+This is a sample application for my article about Ruby on Rails application simplifying:
+
+http://kpumuk.info/ruby-on-rails/simplifying-your-ruby-on-rails-code-presenter-pattern-cells-plugin
+
+Check this article to get an idea what's going on.
+
+= Setup and test data
+
+First you need to create and migrate the database:
+
+  rake db:create
+  rake db:migrate
+
+There are two rake tasks to load test data:
+
+  rake data:videos
+  rake data:categories

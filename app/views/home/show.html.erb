@@ -3,7 +3,7 @@
 <div id="top_videos">
     <h2>Top videos</h2>
     <% cache('home/top_videos') do %>
-        <%= render 'videos', :videos => @presenter.top_videos, :hide_description => true %>
+        <%= render_cell :video, :videos, :videos => @presenter.top_videos, :hide_description => true %>
     <% end %>
 </div>
 
@@ -23,13 +23,13 @@
     <div id="latest">
         <h2>Latest videos</h2>
         <% cache('home/latest_videos') do %>
-            <%= render 'videos', :videos => @presenter.latest_videos, :hide_thumbnail => true %>
+            <%= render_cell :video, :videos, :videos => @presenter.latest_videos, :hide_thumbnail => true %>
         <% end %>
     </div>
     <div id="featured">
         <h2>Featured videos</h2>
         <% cache('home/featured_videos') do %>
-            <%= render 'videos', :videos => @presenter.featured_videos, :hide_thumbnail => true %>
+            <%= render_cell :video, :videos, :videos => @presenter.featured_videos, :hide_thumbnail => true %>
         <% end %>
     </div>
 </div>

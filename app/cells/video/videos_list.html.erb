@@ -1,0 +1,7 @@
+<ul class="<%= @css_class %>">
+  <% @videos.each do |video| %>
+    <li>
+      <%= render :partial => 'video', :locals => { :video => video } %>
+    </li>
+  <% end %>
+</ul>

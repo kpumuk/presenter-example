@@ -1,0 +1,3 @@
+<h3><%= h video.title %></h3>
+<%= image_tag(video.thumbnail_url, :class => 'thumb') unless @hide_thumbnail %>
+<%= '<p>%s</p>' % h(video.description) unless @hide_description %>

@@ -4,10 +4,7 @@ describe HomeController do
 
   it 'should initialize variables' do
     get 'show'
-    assigns[:top_videos].should_not be_nil
-    assigns[:categories].should_not be_nil
-    assigns[:featured_videos].should_not be_nil
-    assigns[:latest_videos].should_not be_nil
+    assigns[:presenter].should be_instance_of(HomePresenters::ShowPresenter)
   end
 
 

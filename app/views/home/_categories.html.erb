@@ -1,5 +1,5 @@
 <ul>
-    <% @categories.each do |category| %>
+    <% @presenter.categories.each do |category| %>
         <li><%= link_to h(category.name), '#' %></li>
     <% end %>
 </ul>

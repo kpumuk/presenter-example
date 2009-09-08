@@ -1,0 +1,97 @@
+= Rspec Cells
+
+This plugin allows you to test your cells easily using RSpec.
+Basically, it adds an example group especially for cells, with
+several helpers to perform cells rendering.
+
+If you are not sure what is cells, please visit its home page:
+
+http://cells.rubyforge.org/
+
+= Installation
+
+If you’re using Rails 2.1, you can simply use "script/plugin".
+It will export all the code from GitHub into "vendor/plugins":
+
+  script/plugin install git://github.com/kpumuk/rspec-cells.git
+
+If you are using Rails prior to 2.1, use the following:
+
+  cd vendor/plugins
+  git clone git://github.com/kpumuk/rspec-cells.git
+  rm -rf rspec-cells/.git
+  cd ../..
+
+To continuously track meta-tags development, it’s probably best
+to install it as a plugin using some vendor branch management tool
+like Braid:
+
+  gem install evilchelu-braid
+
+Using Braid to add a Rails plugin is simple:
+
+  # (make sure you've committed everything first)
+  braid add -p git://github.com/kpumuk/rspec-cells.git
+
+  # now you should have the library in vendor/plugins/rspec-cells
+
+After that is done, add following line into your <tt>spec_helper.rb</tt>:
+
+  require 'spec/cells'
+
+= Usage
+
+Put all your cells specs under <tt>spec/cells</tt> folder. Here is how
+spec looks like in general:
+
+  describe VideoCell do
+    integrate_views
+  
+    context '.videos' do
+      it 'should initialize :videos variable' do
+        params[:id] = 10
+        session[:user_id] = 20
+        opts[:opt] = 'value'
+        result = render_cell :videos, { :videos => [] }, :slug => 'hello'
+        result.should have_tag('div', :class => :videos)
+      end
+    end
+  end
+
+Please note: when you don't pass a cell to describe, like this:
+
+  describe ThingsCell do
+
+then you must provide a <tt>cell_name</tt> within the context of
+your cell specs:
+
+  describe "ThingCell" do
+    cell_name :thing
+
+In your spec you can use <tt>render_cell</tt> method to perform cell
+rendering.
+
+By default rendering will not be performed, only code from cell class
+will be called. To do rendering, add <tt>integrate_views!</tt>
+statement in your <tt>describe</tt> block (just like you do for
+controllers).
+
+From your spec you have access to several variables:
+
+* <tt>opts</tt> — options being passed to cell.
+* <tt>params</tt> — request parameters.
+* <tt>session</tt> — current session.
+* <tt>request</tt> — request object.
+* <tt>assigns</tt> — an array of cell instance variables.
+
+== Who are the authors?
+
+This plugin has been created in Scribd.com for our internal use
+and then the sources were opened for other people to use. All the
+code in this package has been developed by Dmytro Shteflyuk for
+Scribd.com and is released under the MIT license. For more details,
+see the MIT-LICENSE file.
+
+== Credits
+
+* Dmytro Shteflyuk (author) <kpumuk@kpumuk.info> http://kpumuk.info

@@ -2,25 +2,51 @@ module Spec
   module Cells
     module Example
       # Cell Examples live in $RAILS_ROOT/spec/cells/.
+      #
+      # Cell Examples use Spec::Cells::Example::CellExampleGroup,
+      # which supports running specs for Cells in two modes, which
+      # represent the tension between the more granular testing common in TDD
+      # and the more high level testing built into rails. BDD sits somewhere
+      # in between: we want to a balance between specs that are close enough
+      # to the code to enable quick fault isolation and far enough away from
+      # the code to enable refactoring with minimal changes to the existing
+      # specs.
+      #
+      # == Isolation mode (default)
+      #
+      # No dependencies on views because none are ever rendered. The benefit
+      # of this mode is that can spec the cell completely independent of
+      # the view, allowing that responsibility to be handled later, or by
+      # somebody else.
+      #
+      # == Integration mode
+      #
+      # To run in this mode, include the +integrate_views+ declaration
+      # in your controller context:
+      #
+      #   describe ThingController do
+      #     integrate_views
+      #     ...
+      #
+      # In this mode, cell specs are run in the same way that rails
+      # functional tests run — one set of tests for both the cells and
+      # the views. The benefit of this approach is that you get wider coverage
+      # from each spec. Experienced rails developers may find this an easier
+      # approach to begin with, however we encourage you to explore using the
+      # isolation mode and revel in its benefits.
       class CellExampleGroup < Spec::Rails::Example::FunctionalExampleGroup
-        include ActionController::TestProcess
-        include ActionController::Assertions
+        @@cell_class = nil
 
         class << self
-          def inherited(klass) # :nodoc:
-            klass.cell_class_name = cell_class_name
-            klass.integrate_views(integrate_views?)
-            super
-          end
-
-          # Use this to instruct RSpec to render views in your controller examples (Integration Mode).
+          # Use integrate_views to instruct RSpec to render views in
+          # your cell examples in Integration mode.
           #
-          #   describe ThingController do
+          #   describe ThingCell do
           #     integrate_views
           #     ...
           #
-          # See Spec::Rails::Example::ControllerExampleGroup for more information about
-          # Integration and Isolation modes.
+          # See Spec::Cells::Example::CellExampleGroup for more
+          # information about Integration and Isolation modes.
           def integrate_views(integrate_views = true)
             @integrate_views = integrate_views
           end
@@ -29,93 +55,104 @@ module Spec
             @integrate_views
           end
 
-          # You MUST provide a cell_name within the context of
+          def inherited(klass) # :nodoc:
+            klass.integrate_views(integrate_views?)
+            klass.subject { cell }
+            super
+          end
+
+          def set_description(*args) # :nodoc:
+            super
+            tests ActionController::Base
+            if described_class && described_class.ancestors.include?(Cell::Base)
+              cell_klass = if superclass.cell_class && superclass.cell_class.ancestors.include?(Cell::Base)
+                superclass.cell_class
+              else
+                described_class
+              end
+              self.cell_class = cell_klass
+            end
+          end
+
+          # When you don't pass a cell to describe, like this:
+          #
+          #   describe ThingsCell do
+          #
+          # ... then you must provide a cell_name within the context of
           # your cell specs:
           #
           #   describe "ThingCell" do
           #     cell_name :thing
           #     ...
           def cell_name(name)
-            @cell_class_name = "#{name}_cell".camelize
+            self.cell_class = "#{name}_cell".camelize.constantize
           end
-          attr_accessor :cell_class_name # :nodoc:
+
+          def cell_class=(new_class) # :nodoc:
+            write_inheritable_attribute(:cell_class, new_class)
+          end
+
+          def cell_class # :nodoc:
+            read_inheritable_attribute(:cell_class)
+          end
         end
         
         before :each do
-          unless @cell_class.ancestors.include?(Cell::Base)
-            Spec::Expectations.fail_with <<-EOE
-            You have to declare the cell name in cell specs. For example:
-            describe "The ExampleCell" do
-              cell_name :example #invokes the ExampleCell
-            end
-            EOE
+          unless self.class.cell_class and self.class.cell_class.ancestors.include?(Cell::Base)
+            Spec::Expectations.fail_with <<-MESSAGE
+Cell specs need to know what cell is being specified. You can
+indicate this by passing the cell to describe():
+
+  describe MyCell do
+
+or by declaring the cell's name
+
+  describe "a MyCell" do
+    cell_name :my #invokes the MyCell
+end
+MESSAGE
           end
 
-          @controller = ActionController::Base.new
-          @request    = ActionController::TestRequest.new
-          @response   = ActionController::TestResponse.new
-          @controller.request  = @request
-          @controller.response = @response
-          @controller.params   = {}
-          @cell = @cell_class.new(@controller)
+          @controller.response = response
+          @controller.session = session
+          @controller.params = params
+          
+          self.class.cell_class.default_template_format = :html
+          @cell = self.class.cell_class.new(@controller)
+          @opts = @cell.instance_variable_get(:@opts)
 
-          (class << @cell; self; end).class_eval do
-            def cell_path #:nodoc:
-              self.class.name.underscore.gsub('_cell', '')
-            end
-            include CellInstanceMethods
-          end
-          @cell.integrate_views! if @integrate_views
+          @cell.extend CellInstanceMethods
+          @cell.integrate_views! if integrate_views?
         end
 
-        attr_reader :response, :request, :controller, :cell
+        attr_reader :request, :controller, :cell, :opts
 
-        def initialize(defined_description, &implementation) #:nodoc:
-          super
-          @cell_class_name = self.class.cell_class_name.to_s
-          if @cell_class_name.empty?
-            @cell_class_name = self.class.described_type.to_s
-          end
-
-          @cell_class = @cell_class_name.constantize
-          raise "Can't determine cell class for #{@cell_class_name}" if @cell_class.nil?
-          @cell_class.default_template_format = :html
-
-          @integrate_views = self.class.integrate_views?
+        def integrate_views?
+          @integrate_views || self.class.integrate_views?
         end
 
         def render_cell(state, opts = {}, params = {})
-          self.opts.merge!(opts || {})
-          @request.parameters.merge!(params)
+          @opts.update(opts || {})
+          params.update(params || {})
 
           #@controller.send :forget_variables_added_to_assigns   # this fixes bug #1, PARTLY.
 
-          return cell.render_state(state)
+          return @cell.render_state(state)
+        end
+
+        def orig_assigns
+          @cell.assigns_for_view
         end
         
-        def opts
-          @cell.instance_variable_get(:@opts) || {}
-        end
+        protected
 
-        def params
-          @cell.params
-        end
-
-        def session
-          @cell.session
-        end
-
-        def request
-          @cell.request
-        end
-        
-        def assigns
-          HashWithIndifferentAccess.new(@cell.assigns_for_view)
-        end
+          def _assigns_hash_proxy
+            @_assigns_hash_proxy ||= Spec::Rails::Example::AssignsHashProxy.new(self) { @cell }
+          end
 
         module CellInstanceMethods #:nodoc:
           def render_view_for(opts, state)
-            return super(state) if integrate_views?
+            return super(opts, state) if integrate_views?
             nil
           end
           

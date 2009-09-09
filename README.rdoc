@@ -2,7 +2,7 @@
 
 This is a sample application for my article about Ruby on Rails application simplifying:
 
-http://kpumuk.info/ruby-on-rails/simplifying-your-ruby-on-rails-code-presenter-pattern-cells-plugin
+http://kpumuk.info/ruby-on-rails/simplifying-your-ruby-on-rails-code/
 
 Check this article to get an idea what's going on.
 
